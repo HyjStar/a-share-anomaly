@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102019">
+  <meta name="color-scheme" content="light">
+  <meta name="format-detection" content="telephone=no">
+  <title>A股异动监测</title>
+  <style>
+    :root {
+      --ink: #18211c;
+      --ink-soft: #3f4b44;
+      --muted: #778178;
+      --paper: #fffef9;
+      --bg: #f2efe6;
+      --line: #e2ddd0;
+      --accent: #d8443c;
+      --accent-soft: #fbe9e6;
+      --green: #13795b;
+      --green-soft: #e6f3ed;
+      --gold: #a66e26;
+      --hero: #102019;
+      --hero-2: #1b3328;
+      --radius: 18px;
+      --shadow: 0 10px 30px rgba(30, 43, 35, .07);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 400px at 100% -5%, rgba(189, 158, 99, .16), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC",
+        "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      line-height: 1.5;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    button, select { font: inherit; }
+    button { color: inherit; }
+    .app { max-width: 1080px; margin: 0 auto; min-height: 100vh; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      color: #f4f0e4;
+      background:
+        radial-gradient(600px 260px at 92% 4%, rgba(216, 68, 60, .22), transparent 65%),
+        radial-gradient(700px 380px at 0% 110%, rgba(89, 134, 105, .18), transparent 60%),
+        linear-gradient(135deg, var(--hero), var(--hero-2));
+      padding: 22px 18px 18px;
+      border-radius: 0 0 28px 28px;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .28;
+      background-image: linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, #000, transparent 78%);
+    }
+    .hero-inner { position: relative; z-index: 1; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .logo {
+      width: 42px; height: 42px; border-radius: 13px; flex: 0 0 auto;
+      display: grid; place-items: center;
+      color: #fff7eb; font-weight: 800; font-size: 21px;
+      background: linear-gradient(145deg, #dc5149, #a92f2a);
+      box-shadow: 0 8px 22px rgba(216, 68, 60, .3);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+    .brand h1 { margin: 0; font-size: 20px; letter-spacing: .04em; font-weight: 760; }
+    .brand p { margin: 2px 0 0; color: rgba(244,240,228,.64); font-size: 11.5px; letter-spacing: .03em; }
+    .about-btn {
+      margin-left: auto; width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.82); cursor: pointer;
+    }
+    .hero-row { display: flex; align-items: flex-end; gap: 18px; margin-top: 22px; }
+    .data-date { min-width: 0; }
+    .eyebrow { color: rgba(244,240,228,.55); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; }
+    .data-date strong { display: block; margin-top: 3px; font-size: 25px; line-height: 1.2; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+    .run-time { color: rgba(244,240,228,.52); font-size: 11px; margin-top: 3px; }
+    .hero-counts { display: flex; gap: 8px; margin-left: auto; }
+    .count-card {
+      min-width: 82px; padding: 9px 12px 8px; border-radius: 14px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(8px);
+    }
+    .count-card b { display: block; font-size: 23px; line-height: 1.1; color: #fff8e8; font-variant-numeric: tabular-nums; }
+    .count-card b.hot { color: #ff9b88; }
+    .count-card span { display: block; margin-top: 3px; font-size: 10.5px; color: rgba(244,240,228,.58); }
+    .threshold-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; max-width: 100%; }
+    .threshold-strip span {
+      white-space: nowrap; padding: 4px 8px; border-radius: 99px;
+      background: rgba(255,255,255,.065); border: 1px solid rgba(255,255,255,.08);
+      font-size: 10px; color: rgba(244,240,228,.72);
+    }
+    .tabs {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; gap: 4px; padding: 10px 14px;
+      background: rgba(242, 239, 230, .9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(214, 207, 192, .65);
+    }
+    .tabs button {
+      flex: 1; border: 0; background: transparent; border-radius: 12px;
+      padding: 10px 8px; font-size: 13px; color: var(--muted); cursor: pointer;
+      transition: background .18s, color .18s;
+      font-weight: 600;
+    }
+    .tabs button.active { background: var(--ink); color: #fbf7ec; box-shadow: 0 5px 16px rgba(24,33,28,.16); }
+    main { padding: 16px 14px 22px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 2px 12px; }
+    .section-head h2 { margin: 0; font-size: 18px; letter-spacing: .02em; }
+    .section-head .muted { font-size: 11px; color: var(--muted); }
+    .segmented {
+      display: inline-flex; gap: 3px; padding: 3px;
+      background: #e8e3d7; border-radius: 12px; margin-bottom: 14px;
+    }
+    .segmented button {
+      border: 0; background: transparent; padding: 7px 13px; border-radius: 9px;
+      color: var(--ink-soft); font-size: 12px; cursor: pointer; font-weight: 600;
+    }
+    .segmented button.active { background: var(--paper); color: var(--ink); box-shadow: 0 2px 8px rgba(30,40,33,.08); }
+    .segmented .n { font-size: 10px; color: var(--muted); margin-left: 3px; font-weight: 500; }
+    .section-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .list { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .card {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 15px 14px 13px;
+      box-shadow: var(--shadow);
+      animation: rise .32s ease both;
+    }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .card-top { display: flex; align-items: flex-start; gap: 10px; }
+    .rank {
+      flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px;
+      display: grid; place-items: center;
+      font-size: 11px; font-weight: 800; color: #877d68;
+      background: #f1ece0; border: 1px solid #e5ded0;
+      font-variant-numeric: tabular-nums;
+    }
+    .rank.top { color: #a43f37; background: var(--accent-soft); border-color: #f2cdc7; }
+    .identity { min-width: 0; flex: 1; }
+    .identity h3 { margin: 0; font-size: 16px; line-height: 1.25; letter-spacing: .01em; }
+    .identity .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 4px; font-size: 10.5px; color: var(--muted); }
+    .code { font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+    .tag {
+      display: inline-block; padding: 1px 6px; border-radius: 5px;
+      background: #f0ebdf; color: #7a6c53; border: 1px solid #e7decb;
+      font-size: 9.5px; line-height: 1.55; white-space: nowrap;
+    }
+    .score { flex: 0 0 auto; text-align: right; padding-left: 6px; }
+    .score b { display: block; font-size: 22px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+    .score span { display: block; margin-top: 3px; font-size: 9px; color: var(--muted); letter-spacing: .12em; }
+    .score-track { height: 3px; border-radius: 99px; background: #eee8db; margin: 10px 0 12px; overflow: hidden; }
+    .score-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #e8b6a9, var(--accent)); }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #eee8db; border: 1px solid #eee8db; border-radius: 12px; overflow: hidden; }
+    .metric { background: #fffdf6; padding: 8px 8px 7px; min-width: 0; }
+    .metric span { display: block; font-size: 9.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric b { display: block; margin-top: 2px; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .up { color: var(--accent) !important; }
+    .down { color: var(--green) !important; }
+    .flat { color: var(--ink-soft) !important; }
+    .reason-line { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .reason-line span {
+      padding: 3px 7px; border-radius: 6px; font-size: 10px;
+      color: #5e6a60; background: #f4f0e5; border: 1px solid #ebe4d4;
+    }
+    details { margin-top: 10px; }
+    details > summary {
+      cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10.5px; color: var(--muted); user-select: none; padding: 2px 0;
+    }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::after { content: "＋"; font-size: 11px; color: #a69b86; }
+    details[open] > summary::after { content: "－"; }
+    .detail-body { margin-top: 9px; padding-top: 10px; border-top: 1px dashed var(--line); }
+    .detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
+    .detail-grid div span { display: block; color: var(--muted); font-size: 9.5px; }
+    .detail-grid div b { display: block; font-size: 11.5px; margin-top: 1px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .trigger-text { margin: 9px 0 0; font-size: 10.5px; color: var(--ink-soft); line-height: 1.65; background: #f8f5eb; border-radius: 8px; padding: 8px; }
+    .score-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 9px; }
+    .score-parts div { text-align: center; background: #f7f3e9; border-radius: 8px; padding: 6px 3px; }
+    .score-parts b { display: block; font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .score-parts span { font-size: 9px; color: var(--muted); }
+    .empty {
+      text-align: center; padding: 46px 20px; border: 1px dashed #d9d2c2;
+      border-radius: 16px; background: rgba(255,254,249,.55); color: var(--muted);
+    }
+    .empty .mark { font-size: 30px; color: #bdb29d; margin-bottom: 8px; }
+    .empty b { display: block; color: var(--ink-soft); font-size: 14px; margin-bottom: 4px; }
+    .empty p { margin: 0 auto; max-width: 360px; font-size: 11.5px; line-height: 1.7; }
+    .notice {
+      border: 1px solid #eadcc2; background: #fbf5e8; color: #806643;
+      border-radius: 12px; padding: 9px 11px; font-size: 11px; margin-bottom: 12px;
+    }
+    .coverage {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 13px;
+      padding: 11px 12px; margin-bottom: 12px;
+    }
+    .coverage-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--ink-soft); }
+    .coverage-top b { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .coverage-track { height: 5px; border-radius: 99px; background: #eee8db; overflow: hidden; margin-top: 8px; }
+    .coverage-track i { display: block; height: 100%; background: #7e9a83; border-radius: inherit; }
+    .coverage p { margin: 7px 0 0; font-size: 10px; color: var(--muted); line-height: 1.55; }
+    .summary-card { padding: 13px 14px; }
+    .summary-top { display: flex; align-items: flex-start; gap: 9px; }
+    .summary-name { flex: 1; min-width: 0; }
+    .summary-name h3 { margin: 0; font-size: 14.5px; }
+    .appearances {
+      flex: 0 0 auto; text-align: right; padding-left: 6px;
+    }
+    .appearances b { font-size: 19px; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+    .appearances span { font-size: 9px; color: var(--muted); margin-left: 2px; }
+    .summary-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .summary-metrics div { background: #f7f3e9; border-radius: 8px; padding: 6px 8px; }
+    .summary-metrics span { display: block; color: var(--muted); font-size: 9px; }
+    .summary-metrics b { display: block; font-size: 12.5px; margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .occ-track { height: 3px; background: #eee8db; border-radius: 99px; margin-top: 9px; overflow: hidden; }
+    .occ-track i { display: block; height: 100%; background: #ccb27f; border-radius: inherit; }
+    .date-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+    .date-list span { padding: 2px 6px; background: #f2ede2; border-radius: 5px; color: #766c59; font-size: 9.5px; font-variant-numeric: tabular-nums; }
+    .history-control {
+      display: flex; align-items: center; gap: 10px; justify-content: space-between;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 13px;
+      padding: 9px 11px; margin-bottom: 12px;
+    }
+    .history-control label { font-size: 10px; color: var(--muted); }
+    .history-control select {
+      flex: 1; max-width: 220px; border: 1px solid #ded7c8; border-radius: 8px;
+      background: #fffdf6; padding: 7px 9px; font-size: 12px; color: var(--ink);
+    }
+    .history-meta { font-size: 11px; color: var(--muted); margin: 0 2px 12px; }
+    .history-meta b { color: var(--accent); }
+    .stack-title {
+      display: flex; align-items: center; gap: 7px; margin: 18px 2px 10px;
+      font-size: 12px; color: var(--ink-soft); font-weight: 700;
+    }
+    .stack-title .line { flex: 1; height: 1px; background: var(--line); }
+    .stack-title .count { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .footer {
+      padding: 18px 18px 28px; text-align: center; color: #938a7a; font-size: 10px;
+      line-height: 1.7; border-top: 1px solid rgba(214, 207, 192, .55); margin-top: 8px;
+    }
+    .footer strong { color: #736a5a; }
+    .footer a { color: #816b46; text-decoration: none; border-bottom: 1px dotted #b7a789; }
+    dialog {
+      width: min(94vw, 520px); max-height: 84vh; overflow: auto;
+      border: 0; border-radius: 18px; padding: 0; color: var(--ink);
+      background: var(--paper); box-shadow: 0 24px 70px rgba(0,0,0,.28);
+    }
+    dialog::backdrop { background: rgba(15, 25, 19, .55); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
+    .dialog-head h2 { margin: 0; font-size: 16px; }
+    .dialog-close { margin-left: auto; border: 0; background: #f1ece0; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; color: var(--muted); }
+    .dialog-body { padding: 0 18px 20px; font-size: 11.5px; color: var(--ink-soft); line-height: 1.7; }
+    .dialog-body h3 { font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 18px 0 7px; text-transform: uppercase; }
+    .dialog-body p { margin: 5px 0; }
+    .dialog-body .flow { display: flex; flex-wrap: wrap; gap: 5px; }
+    .dialog-body .flow span { background: #f4f0e5; border: 1px solid #e9e1d1; padding: 3px 7px; border-radius: 6px; font-size: 10px; }
+    .dialog-body table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    .dialog-body td { padding: 5px 0; border-bottom: 1px solid #eee9dd; vertical-align: top; }
+    .dialog-body td:first-child { color: var(--muted); width: 36%; }
+    .dialog-body code { background: #f1ece0; border-radius: 4px; padding: 1px 4px; font-size: 10px; }
+    .hidden { display: none !important; }
+    .muted { color: var(--muted); }
+    noscript { display: block; padding: 18px; background: #fff3d9; font-size: 12px; }
+    :focus-visible { outline: 2px solid #b69052; outline-offset: 2px; }
+    @media (min-width: 720px) {
+      .hero { padding: 28px 30px 22px; border-radius: 0 0 30px 30px; }
+      .brand h1 { font-size: 22px; }
+      .tabs { justify-content: center; padding: 12px 28px; }
+      .tabs button { flex: 0 1 160px; }
+      main { padding: 22px 28px 30px; }
+      .list { grid-template-columns: 1fr 1fr; }
+      .list.single { grid-template-columns: 1fr; }
+      .card { padding: 17px 17px 14px; }
+      .metrics { grid-template-columns: repeat(4, 1fr); }
+      .metric b { font-size: 14.5px; }
+      .summary-metrics { grid-template-columns: repeat(3, 1fr); }
+      .footer { font-size: 10.5px; }
+    }
+    @media (max-width: 380px) {
+      .hero { padding-left: 14px; padding-right: 14px; }
+      main { padding-left: 11px; padding-right: 11px; }
+      .metric { padding-left: 6px; padding-right: 5px; }
+      .metric b { font-size: 12.5px; }
+      .hero-row { gap: 8px; }
+      .count-card { min-width: 70px; padding-left: 9px; padding-right: 9px; }
+      .data-date strong { font-size: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">异</div>
+          <div>
+            <h1 id="siteTitle">A股异动监测</h1>
+            <p id="siteSubtitle">下跌趋势中的放量上涨 · 主力资金流入</p>
+          </div>
+          <button class="about-btn" id="aboutBtn" aria-label="查看说明与阈值">?</button>
+        </div>
+        <div class="hero-row">
+          <div class="data-date">
+            <div class="eyebrow">DATA DATE</div>
+            <strong id="dataDate">等待首次运行</strong>
+            <div class="run-time" id="runTime">收盘后自动更新</div>
+          </div>
+          <div class="hero-counts">
+            <div class="count-card">
+              <b class="hot" id="stockCount">0</b>
+              <span>异动个股</span>
+            </div>
+            <div class="count-card">
+              <b id="sectorCount">0</b>
+              <span>异动板块</span>
+            </div>
+          </div>
+        </div>
+        <div class="threshold-strip" id="thresholdStrip" aria-label="当前触发阈值"></div>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="主导航">
+      <button class="active" data-view="today" role="tab" aria-selected="true">今日异动</button>
+      <button data-view="summary" role="tab" aria-selected="false">区间汇总</button>
+      <button data-view="history" role="tab" aria-selected="false">历史回看</button>
+    </nav>
+
+    <main>
+      <div id="globalNotice"></div>
+      <section id="view-today">
+        <div class="section-head">
+          <h2>今日异动</h2>
+          <span class="muted" id="todayNote">四条件同时满足</span>
+        </div>
+        <div class="section-toolbar">
+          <div class="segmented" id="todayKinds" role="tablist" aria-label="今日标的类型">
+            <button class="active" data-kind="stocks" role="tab" aria-selected="true">个股 <span class="n" id="tabStockCount">0</span></button>
+            <button data-kind="sectors" role="tab" aria-selected="false">板块 <span class="n" id="tabSectorCount">0</span></button>
+          </div>
+        </div>
+        <div id="todayList" class="list"></div>
+      </section>
+
+      <section id="view-summary" class="hidden">
+        <div class="section-head">
+          <h2>区间汇总</h2>
+          <span class="muted">发现持续被资金关注的标的</span>
+        </div>
+        <div class="section-toolbar">
+          <div class="segmented" id="windowTabs" role="tablist" aria-label="统计区间">
+            <button class="active" data-window="5" role="tab" aria-selected="true">近 5 日</button>
+            <button data-window="10" role="tab" aria-selected="false">近 10 日</button>
+            <button data-window="20" role="tab" aria-selected="false">近 20 日</button>
+          </div>
+          <div class="segmented" id="summaryKinds" role="tablist" aria-label="汇总类型">
+            <button class="active" data-kind="stocks" role="tab" aria-selected="true">个股</button>
+            <button data-kind="sectors" role="tab" aria-selected="false">板块</button>
+          </div>
+        </div>
+        <div id="summaryCoverage"></div>
+        <div id="summaryList" class="list"></div>
+      </section>
+
+      <section id="view-history" class="hidden">
+        <div class="section-head">
+          <h2>历史回看</h2>
+          <span class="muted">逐日留存，不做事后重算</span>
+        </div>
+        <div class="history-control">
+          <label for="historySelect">选择交易日</label>
+          <select id="historySelect"></select>
+        </div>
+        <div class="history-meta" id="historyMeta"></div>
+        <div id="historyContent"></div>
+      </section>
+
+      <section id="globalEmpty" class="empty hidden">
+        <div class="mark">◌</div>
+        <b>还没有收盘统计数据</b>
+        <p>先运行一次 <code>python run.py scan</code>。系统会在收盘后抓取全市场数据并生成这个页面。</p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div><strong id="footerSource">AkShare / 东方财富</strong> · <span id="footerGenerated">—</span></div>
+      <div id="footerDisclaimer">仅供研究复盘，不构成投资建议。</div>
+    </footer>
+  </div>
+
+  <dialog id="aboutDialog" aria-labelledby="aboutTitle">
+    <div class="dialog-head">
+      <h2 id="aboutTitle">口径与说明</h2>
+      <button class="dialog-close" id="aboutClose" aria-label="关闭">×</button>
+    </div>
+    <div class="dialog-body">
+      <p>系统监测“下跌趋势中，突然放量上涨且主力资金净流入”的 A 股个股与行业/概念板块。以下条件必须<strong>同时满足</strong>。</p>
+      <h3>当前阈值</h3>
+      <div class="flow" id="dialogThresholds"></div>
+      <h3>判定口径</h3>
+      <table>
+        <tr><td>下跌趋势</td><td>近 20 个交易日跌幅达到阈值，<strong>或</strong>收盘价低于 MA20 达到阈值；并且当日之前至少连续 N 个交易日收阴或下跌。</td></tr>
+        <tr><td>突然放量</td><td>当日成交量 / 前 5 日均量 ≥ 量比阈值；或换手率 / 前 5 日均换手率 ≥ 换手放大阈值（任一满足）。</td></tr>
+        <tr><td>上涨</td><td>个股或板块当日涨幅达到各自阈值。</td></tr>
+        <tr><td>大资金</td><td>个股主力净流入为正，且净流入额 / 当日成交额 ≥ 阈值。板块则要求净流入为正，并且净流入排名进入前列或净占比达标。</td></tr>
+      </table>
+      <h3>异动强度评分</h3>
+      <p id="dialogScore">四因子归一化后加权，满分 100。仅用于同日排序，不代表收益预测。</p>
+      <h3>数据与更新</h3>
+      <p id="dialogData">数据来自 AkShare 的东方财富公开接口，收盘后运行。板块资金流为当日快照，区间结果依赖本地逐日留存。</p>
+      <p id="dialogRun">—</p>
+      <h3>限制</h3>
+      <p>“主力资金”是东方财富按超大单/大单口径推算的净流入，并非真实机构持仓变化。免费接口可能限流或调整字段；页面数据以最近一次成功运行为准。</p>
+      <p id="dialogDisclaimer" class="muted"></p>
+    </div>
+  </dialog>
+
+  <noscript>需要启用 JavaScript 才能查看异动数据。</noscript>
+  <script id="app-data" type="application/json">{"meta":{"has_data":false,"generated_at":"2026-10-22T21:48:52+08:00","latest_trade_date":null,"latest_run_at":null,"data_source":"AkShare / 东方财富","title":"A股异动监测","subtitle":"下跌趋势中的放量上涨 · 主力资金流入","disclaimer":"数据来自 AkShare / 东方财富公开接口，仅供研究复盘，不构成任何投资建议。","thresholds":["个股涨幅 ≥ 3%","板块涨幅 ≥ 2%","量比 ≥ 2×","主力净流入占比 ≥ 5%","20日跌幅 ≥ 8%","连跌 ≥ 3日"],"score_note":"异动强度 = 放量、涨幅、主力净流入占比、跌幅深度四因子加权，0–100 分。","window_note":"区间统计按交易日累计，只统计系统成功运行且落库的日期。","counts":{"stock":0,"sector":0},"history_days":0,"score_formula":{}},"today":{"trade_date":null,"stocks":[],"sectors":[]},"summary":{"5":{"window":5,"sessions":[],"covered_sessions":[],"sessions_available":0,"window_days":5,"baseline_date":null,"coverage_pct":0.0,"stocks":[],"sectors":[]},"10":{"window":10,"sessions":[],"covered_sessions":[],"sessions_available":0,"window_days":10,"baseline_date":null,"coverage_pct":0.0,"stocks":[],"sectors":[]},"20":{"window":20,"sessions":[],"covered_sessions":[],"sessions_available":0,"window_days":20,"baseline_date":null,"coverage_pct":0.0,"stocks":[],"sectors":[]}},"history":[]}</script>
+  <script>
+    "use strict";
+    const DATA = JSON.parse(document.getElementById("app-data").textContent);
+    const META = DATA.meta || {};
+    const state = {
+      view: "today",
+      todayKind: "stocks",
+      window: "5",
+      summaryKind: "stocks",
+      historyDate: null
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function esc(value) {
+      return String(value == null ? "" : value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+    function num(value, digits = 2) {
+      if (value === null || value === undefined || value === "" || Number.isNaN(Number(value))) return "—";
+      return Number(value).toFixed(digits);
+    }
+    function pct(value, digits = 2) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+      const n = Number(value);
+      return `${n > 0 ? "+" : ""}${n.toFixed(digits)}%`;
+    }
+    function tone(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value)) || Number(value) === 0) return "flat";
+      return Number(value) > 0 ? "up" : "down";
+    }
+    function amount(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+      const n = Number(value);
+      const sign = n < 0 ? "-" : "";
+      const abs = Math.abs(n);
+      if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(2)}亿`;
+      if (abs >= 1e4) return `${sign}${Math.round(abs / 1e4)}万`;
+      return `${sign}${abs.toFixed(0)}`;
+    }
+    function ratio(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+      return `${Number(value).toFixed(2)}×`;
+    }
+    function dateShort(value) {
+      if (!value) return "—";
+      return String(value).slice(5);
+    }
+    function generatedText(value) {
+      if (!value) return "—";
+      return String(value).replace("T", " ").slice(0, 19);
+    }
+    function setHTML(el, html) { el.innerHTML = html; }
+
+    function scoreParts(item) {
+      const parts = item.score_parts || {};
+      const factors = parts.factors || {};
+      const labels = { volume: "放量", gain: "涨幅", fund: "资金", drop: "跌幅" };
+      return Object.keys(labels).map((key) => {
+        const value = factors[key];
+        return `<div><b>${value == null ? "—" : num(value, 0)}</b><span>${labels[key]}</span></div>`;
+      }).join("");
+    }
+
+    function detailRows(item, kind) {
+      const rows = [
+        ["20日跌幅", pct(item.ret_20d)],
+        ["MA20偏离", pct(item.ma20_gap)],
+        ["连续下跌", `${num(item.down_streak, 0)} 日`],
+        ["资金占比", pct(item.fund_ratio)],
+        ["换手放大", ratio(item.turnover_ratio)],
+        ["成交额放大", ratio(item.amount_ratio)]
+      ];
+      if (kind === "sectors") {
+        rows.push(["资金净流入排名", item.fund_rank ? `第 ${item.fund_rank}` : "—"]);
+        rows.push(["领涨股", item.leading_stock || "—"]);
+        rows.push(["涨跌家数", `${item.up_count || 0} / ${item.down_count || 0}`]);
+      } else {
+        rows.push(["所属行业", item.industry || "未分类"]);
+        rows.push(["最新价", item.price == null ? "—" : num(item.price)]);
+        rows.push(["成交额", amount(item.amount)]);
+      }
+      return rows.map(([label, value]) => `<div><span>${esc(label)}</span><b>${esc(value)}</b></div>`).join("");
+    }
+
+    function anomalyCard(item, index, kind, compact = false) {
+      const isSector = kind === "sectors";
+      const code = item.code ? `<span class="code">${esc(item.code)}</span>` : "";
+      const reasons = (item.reasons || []).slice(0, 4).map((reason) => `<span>${esc(reason)}</span>`).join("");
+      const score = item.score == null ? 0 : Math.max(0, Math.min(100, Number(item.score)));
+      const tag = isSector
+        ? `<span class="tag">${esc(item.category || "板块")}</span>${item.leading_stock ? `<span class="tag">领涨 ${esc(item.leading_stock)}</span>` : ""}`
+        : `<span class="tag">${esc(item.industry || "未分类")}</span>`;
+      const topClass = index < 3 ? " top" : "";
+      return `<article class="card" style="animation-delay:${Math.min(index * 35, 280)}ms">
+        <div class="card-top">
+          <div class="rank${topClass}">${String(index + 1).padStart(2, "0")}</div>
+          <div class="identity">
+            <h3>${esc(item.name || "—")}</h3>
+            <div class="sub">${code}${tag}</div>
+          </div>
+          <div class="score"><b>${num(score, 1)}</b><span>强度</span></div>
+        </div>
+        <div class="score-track"><i style="width:${score}%"></i></div>
+        <div class="metrics">
+          <div class="metric"><span>当日涨幅</span><b class="${tone(item.pct)}">${pct(item.pct)}</b></div>
+          <div class="metric"><span>量比</span><b>${ratio(item.volume_ratio)}</b></div>
+          <div class="metric"><span>主力净流入</span><b class="${tone(item.main_net_inflow)}">${amount(item.main_net_inflow)}</b></div>
+          <div class="metric"><span>20日跌幅</span><b class="${tone(item.ret_20d)}">${pct(item.ret_20d)}</b></div>
+        </div>
+        <div class="reason-line">${reasons}</div>
+        <details>
+          <summary>触发详情与评分</summary>
+          <div class="detail-body">
+            <div class="detail-grid">${detailRows(item, kind)}</div>
+            <div class="score-parts">${scoreParts(item)}</div>
+            <p class="trigger-text">${esc(item.trigger || "—")}</p>
+          </div>
+        </details>
+      </article>`;
+    }
+
+    function emptyBlock(title, text) {
+      return `<div class="empty"><div class="mark">◌</div><b>${esc(title)}</b><p>${esc(text)}</p></div>`;
+    }
+
+    function renderToday() {
+      const kind = state.todayKind;
+      const items = (DATA.today && DATA.today[kind]) || [];
+      $$("#todayKinds button").forEach((button) => {
+        const active = button.dataset.kind === kind;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      if (!META.has_data) {
+        setHTML($("#todayList"), "");
+        return;
+      }
+      if (!items.length) {
+        setHTML($("#todayList"), emptyBlock(
+          kind === "stocks" ? "今日没有个股同时满足全部条件" : "今日没有板块同时满足全部条件",
+          "异动要求“下跌趋势 + 放量 + 上涨 + 资金流入”同时成立。数量少通常说明当日以普涨或无量反弹为主，不必强行放宽阈值。"
+        ));
+        return;
+      }
+      setHTML($("#todayList"), items.map((item, index) => anomalyCard(item, index, kind)).join(""));
+    }
+
+    function summaryCoverage(windowData) {
+      const covered = windowData.sessions_available || 0;
+      const total = windowData.window_days || windowData.window || 5;
+      const coverage = windowData.coverage_pct == null ? 0 : windowData.coverage_pct;
+      const incomplete = covered < total;
+      return `<div class="coverage">
+        <div class="coverage-top"><span>数据覆盖 <b>${covered}/${total}</b> 个交易日</span><span>${num(coverage, 0)}%</span></div>
+        <div class="coverage-track"><i style="width:${Math.min(100, coverage)}%"></i></div>
+        ${incomplete ? `<p>区间按真实交易日计算，但系统目前只成功覆盖其中 ${covered} 天。继续每日收盘后运行即可补齐；区间涨幅优先用异动时留存的 K 线与最新收盘价计算，起点数据缺失时显示为「—」。</p>` : `<p>窗口内每个交易日都有成功落库记录，区间统计完整。区间涨幅用异动时留存的 K 线与最新收盘价计算。</p>`}
+      </div>`;
+    }
+
+    function summaryCard(row, index, kind) {
+      const total = (DATA.summary[state.window] || {}).window_days || 5;
+      const count = row.appearances || 0;
+      const topClass = index < 3 ? " top" : "";
+      const tagValue = kind === "sectors" ? (row.category || row.kind || "板块") : (row.industry || "未分类");
+      const rangeText = row.range_available ? pct(row.range_return_pct) : "—";
+      const dates = (row.dates || []).map((day) => `<span>${esc(dateShort(day))}</span>`).join("");
+      return `<article class="card summary-card">
+        <div class="summary-top">
+          <div class="rank${topClass}">${String(index + 1).padStart(2, "0")}</div>
+          <div class="summary-name">
+            <h3>${esc(row.name || "—")}</h3>
+            <div class="sub"><span class="code">${esc(row.code || "")}</span><span class="tag">${esc(tagValue)}</span><span>最近 ${esc(row.last_date || "—")}</span></div>
+          </div>
+          <div class="appearances"><b>${count}</b><span>次</span></div>
+        </div>
+        <div class="occ-track"><i style="width:${Math.min(100, count / Math.max(total, 1) * 100)}%"></i></div>
+        <div class="summary-metrics">
+          <div><span>累计强度</span><b>${num(row.cumulative_score, 1)}</b></div>
+          <div><span>区间涨幅</span><b class="${tone(row.range_return_pct)}">${rangeText}</b></div>
+          <div><span>最近涨幅</span><b class="${tone(row.last_pct)}">${pct(row.last_pct)}</b></div>
+        </div>
+        <details>
+          <summary>出现日期与最近一次明细</summary>
+          <div class="detail-body">
+            <div class="date-list">${dates || "<span>—</span>"}</div>
+            <div class="detail-grid" style="margin-top:10px">
+              <div><span>平均强度</span><b>${num(row.avg_score, 1)}</b></div>
+              <div><span>最高强度</span><b>${num(row.max_score, 1)}</b></div>
+              <div><span>区间起点</span><b>${esc(row.range_start_date || "—")}</b></div>
+            </div>
+            <p class="trigger-text">${esc((row.last && row.last.trigger) || "—")}</p>
+          </div>
+        </details>
+      </article>`;
+    }
+
+    function renderSummary() {
+      $$("#windowTabs button").forEach((button) => {
+        const active = button.dataset.window === state.window;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      $$("#summaryKinds button").forEach((button) => {
+        const active = button.dataset.kind === state.summaryKind;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      const windowData = DATA.summary[state.window] || {};
+      setHTML($("#summaryCoverage"), META.has_data ? summaryCoverage(windowData) : "");
+      const rows = windowData[state.summaryKind] || [];
+      if (!META.has_data) {
+        setHTML($("#summaryList"), "");
+        return;
+      }
+      if (!rows.length) {
+        setHTML($("#summaryList"), emptyBlock(
+          `近 ${state.window} 个交易日暂无${state.summaryKind === "stocks" ? "个股" : "板块"}异动`,
+          windowData.sessions_available < windowData.window_days
+            ? "系统还在积累数据，或窗口内确实没有同时满足四条件的标的。"
+            : "该窗口内没有满足全部四条件的标的。"
+        ));
+        return;
+      }
+      setHTML($("#summaryList"), rows.map((row, index) => summaryCard(row, index, state.summaryKind)).join(""));
+    }
+
+    function historyDates() {
+      return (DATA.history || []).map((entry) => entry.trade_date);
+    }
+
+    function renderHistory() {
+      const entries = DATA.history || [];
+      if (!entries.length) {
+        setHTML($("#historyContent"), "");
+        setHTML($("#historyMeta"), "");
+        return;
+      }
+      if (!state.historyDate || !entries.some((entry) => entry.trade_date === state.historyDate)) {
+        state.historyDate = entries[0].trade_date;
+      }
+      const select = $("#historySelect");
+      select.innerHTML = entries.map((entry) =>
+        `<option value="${esc(entry.trade_date)}"${entry.trade_date === state.historyDate ? " selected" : ""}>${esc(entry.trade_date)} · 个股 ${entry.stock_count} / 板块 ${entry.sector_count}</option>`
+      ).join("");
+      const entry = entries.find((item) => item.trade_date === state.historyDate);
+      if (!entry) return;
+      setHTML($("#historyMeta"), `该日异动：<b>${entry.stock_count}</b> 只个股、<b>${entry.sector_count}</b> 个板块。`);
+      const stockBlock = entry.stocks.length
+        ? `<div class="stack-title"><span>个股</span><span class="count">${entry.stocks.length}</span><span class="line"></span></div><div class="list">${entry.stocks.map((item, i) => anomalyCard(item, i, "stocks")).join("")}</div>`
+        : "";
+      const sectorBlock = entry.sectors.length
+        ? `<div class="stack-title"><span>板块</span><span class="count">${entry.sectors.length}</span><span class="line"></span></div><div class="list">${entry.sectors.map((item, i) => anomalyCard(item, i, "sectors")).join("")}</div>`
+        : "";
+      setHTML($("#historyContent"), stockBlock + sectorBlock || emptyBlock("该交易日没有异动", "严格条件没有筛出标的。"));
+    }
+
+    function switchView(view) {
+      state.view = view;
+      $$(".tabs button").forEach((button) => {
+        const active = button.dataset.view === view;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      $("#view-today").classList.toggle("hidden", view !== "today");
+      $("#view-summary").classList.toggle("hidden", view !== "summary");
+      $("#view-history").classList.toggle("hidden", view !== "history");
+      if (view === "today") renderToday();
+      if (view === "summary") renderSummary();
+      if (view === "history") renderHistory();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function fillHeader() {
+      document.title = META.title || "A股异动监测";
+      $("#siteTitle").textContent = META.title || "A股异动监测";
+      $("#siteSubtitle").textContent = META.subtitle || "";
+      $("#dataDate").textContent = META.latest_trade_date || "等待首次运行";
+      $("#runTime").textContent = META.latest_run_at ? `更新于 ${generatedText(META.latest_run_at)}` : "收盘后自动更新";
+      $("#stockCount").textContent = (META.counts && META.counts.stock) || 0;
+      $("#sectorCount").textContent = (META.counts && META.counts.sector) || 0;
+      $("#tabStockCount").textContent = (META.counts && META.counts.stock) || 0;
+      $("#tabSectorCount").textContent = (META.counts && META.counts.sector) || 0;
+      $("#footerSource").textContent = META.data_source || "AkShare / 东方财富";
+      $("#footerGenerated").textContent = `生成于 ${generatedText(META.generated_at)}`;
+      $("#footerDisclaimer").textContent = META.disclaimer || "仅供研究复盘，不构成投资建议。";
+      $("#todayNote").textContent = META.latest_trade_date ? `${META.latest_trade_date} 收盘数据` : "四条件同时满足";
+      const thresholds = META.thresholds || [];
+      $("#thresholdStrip").innerHTML = thresholds.map((item) => `<span>${esc(item)}</span>`).join("");
+      $("#dialogThresholds").innerHTML = thresholds.map((item) => `<span>${esc(item)}</span>`).join("");
+      $("#dialogScore").textContent = META.score_note || "";
+      $("#dialogData").textContent = `数据来源：${META.data_source || "AkShare / 东方财富"}。${META.window_note || ""}`;
+      $("#dialogRun").textContent = META.latest_run_at ? `最近一次成功运行：${generatedText(META.latest_run_at)}（生成页面：${generatedText(META.generated_at)}）` : "尚未成功运行。";
+      $("#dialogDisclaimer").textContent = META.disclaimer || "";
+      const warnings = (META.latest_run && META.latest_run.meta && META.latest_run.meta.warnings) || [];
+      $("#globalNotice").innerHTML = warnings.length && META.has_data
+        ? `<div class="notice"><b>数据提示：</b>${warnings.map((item) => esc(item)).join("；")}</div>`
+        : "";
+      $("#globalEmpty").classList.toggle("hidden", Boolean(META.has_data));
+      if (!META.has_data) {
+        $("#todayList").innerHTML = "";
+        $("#summaryList").innerHTML = "";
+        $("#historyContent").innerHTML = "";
+      }
+    }
+
+    function bindEvents() {
+      $$(".tabs button").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+      $$("#todayKinds button").forEach((button) => button.addEventListener("click", () => {
+        state.todayKind = button.dataset.kind;
+        renderToday();
+      }));
+      $$("#windowTabs button").forEach((button) => button.addEventListener("click", () => {
+        state.window = button.dataset.window;
+        renderSummary();
+      }));
+      $$("#summaryKinds button").forEach((button) => button.addEventListener("click", () => {
+        state.summaryKind = button.dataset.kind;
+        renderSummary();
+      }));
+      $("#historySelect").addEventListener("change", (event) => {
+        state.historyDate = event.target.value;
+        renderHistory();
+      });
+      const dialog = $("#aboutDialog");
+      $("#aboutBtn").addEventListener("click", () => {
+        if (typeof dialog.showModal === "function") dialog.showModal();
+        else dialog.setAttribute("open", "");
+      });
+      $("#aboutClose").addEventListener("click", () => {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      });
+      dialog.addEventListener("click", (event) => {
+        const rect = dialog.getBoundingClientRect();
+        const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+        if (outside && typeof dialog.close === "function") dialog.close();
+      });
+    }
+
+    function init() {
+      fillHeader();
+      bindEvents();
+      renderToday();
+      if (!META.has_data) {
+        $("#view-today").classList.add("hidden");
+        $("#view-summary").classList.add("hidden");
+        $("#view-history").classList.add("hidden");
+        $$(".tabs").forEach((el) => el.classList.add("hidden"));
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

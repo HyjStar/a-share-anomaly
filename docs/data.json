@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "has_data": false,
+    "generated_at": "2026-10-22T21:48:52+08:00",
+    "latest_trade_date": null,
+    "latest_run_at": null,
+    "data_source": "AkShare / 东方财富",
+    "title": "A股异动监测",
+    "subtitle": "下跌趋势中的放量上涨 · 主力资金流入",
+    "disclaimer": "数据来自 AkShare / 东方财富公开接口，仅供研究复盘，不构成任何投资建议。",
+    "thresholds": [
+      "个股涨幅 ≥ 3%",
+      "板块涨幅 ≥ 2%",
+      "量比 ≥ 2×",
+      "主力净流入占比 ≥ 5%",
+      "20日跌幅 ≥ 8%",
+      "连跌 ≥ 3日"
+    ],
+    "score_note": "异动强度 = 放量、涨幅、主力净流入占比、跌幅深度四因子加权，0–100 分。",
+    "window_note": "区间统计按交易日累计，只统计系统成功运行且落库的日期。",
+    "counts": {
+      "stock": 0,
+      "sector": 0
+    },
+    "history_days": 0,
+    "score_formula": {}
+  },
+  "today": {
+    "trade_date": null,
+    "stocks": [],
+    "sectors": []
+  },
+  "summary": {
+    "5": {
+      "window": 5,
+      "sessions": [],
+      "covered_sessions": [],
+      "sessions_available": 0,
+      "window_days": 5,
+      "baseline_date": null,
+      "coverage_pct": 0.0,
+      "stocks": [],
+      "sectors": []
+    },
+    "10": {
+      "window": 10,
+      "sessions": [],
+      "covered_sessions": [],
+      "sessions_available": 0,
+      "window_days": 10,
+      "baseline_date": null,
+      "coverage_pct": 0.0,
+      "stocks": [],
+      "sectors": []
+    },
+    "20": {
+      "window": 20,
+      "sessions": [],
+      "covered_sessions": [],
+      "sessions_available": 0,
+      "window_days": 20,
+      "baseline_date": null,
+      "coverage_pct": 0.0,
+      "stocks": [],
+      "sectors": []
+    }
+  },
+  "history": []
+}

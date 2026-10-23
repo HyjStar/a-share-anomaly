@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.pytest_cache/
+.ruff_cache/
+logs/
+data/cache/
+.DS_Store
+# 某些系统生成的 SQLite 辅助文件；主库 data/anomaly.db 需要提交
+*.db-wal
+*.db-shm

@@ -1,0 +1,124 @@
+# A股异动监测系统 — 阈值与运行配置
+# 所有阈值都可以在这里调整；修改后下一次运行即生效。
+# 评分满分并未改变“是否异动”的判定，只影响排序。
+
+app:
+  timezone: "Asia/Shanghai"
+  database: "data/anomaly.db"
+  daily_archive_dir: "data/daily"
+  docs_dir: "docs"
+  template: "web/template.html"
+
+  # 收盘后至少等到这个时间才允许抓取（防止手动误跑盘中数据）
+  min_run_time: "15:05"
+  # 用平安银行/贵州茅台的最新日线确认“今天的数据已经落盘”，防止把昨日快照写成今天
+  verify_trade_date: true
+  # 每个交易日抓取失败后的重试
+  request_retries: 3
+  request_retry_backoff_seconds: 2.5
+  # 逐只股票/板块拉历史 K 线时的间隔，避免触发数据源限流
+  request_interval_seconds: 0.35
+  # 拉取最近多少自然日的历史，保证至少覆盖 20 个交易日 + 5 日均量
+  history_calendar_days: 150
+  # 预筛后最多对多少只股票/板块做历史 K 线校验（按初步强度排序）
+  max_stock_candidates: 300
+  max_sector_candidates: 80
+
+  # 网页中保留多少个交易日的逐日历史；区间统计固定用 5/10/20 日
+  web_history_days: 60
+  # 异动股/观察期标的的区间 K 线保留天数（不保存全市场快照，避免仓库膨胀）
+  data_retention_days: 220
+
+site:
+  title: "A股异动监测"
+  subtitle: "下跌趋势中的放量上涨 · 主力资金流入"
+  disclaimer: "数据来自 AkShare / 东方财富公开接口，仅供研究复盘，不构成任何投资建议。"
+
+stock:
+  # 条件3：个股当日涨幅
+  min_gain_pct: 3.0
+  # 流动性与价格过滤，避免低价股/仙股和成交过于清淡的标的
+  min_price: 2.0
+  min_amount: 30000000        # 元
+  # 名称过滤正则：ST、退市、上市首日 N、上市前 5 日 C
+  exclude_name_patterns: ["ST", "退", "^N", "^C"]
+
+  # 条件2的预筛。历史 K 线拿到后会按真实 5 日均量重新计算；
+  # 这里只用于减少请求数。保留缓冲，避免刚好达到阈值的标的被误杀。
+  prefilter:
+    enabled: true
+    min_spot_volume_ratio: 1.2
+    min_spot_turnover_pct: 1.5
+
+  # 条件1：下跌趋势
+  trend:
+    lookback_days: 20
+    min_drop_pct: 8.0          # 近 20 个交易日跌幅 >= 8%
+    ma_period: 20
+    ma_discount_pct: 5.0       # 收盘价低于 MA20 >= 5%
+    prior_down_days: 3         # 当日之前至少连续 3 个交易日收阴或下跌
+
+  # 条件2：放量（成交量、换手率任一达到即可）
+  volume:
+    avg_days: 5
+    min_volume_ratio: 2.0
+    min_turnover_ratio: 1.8
+    use_turnover_ratio: true
+
+  # 条件4：主力资金净流入
+  fund:
+    require_positive: true
+    min_net_inflow_ratio_pct: 5.0
+
+sector:
+  # 条件3：板块当日涨幅
+  min_gain_pct: 2.0
+  include_industry: true
+  include_concept: true
+  # 过滤“昨日涨停/连板”等风格型榜单，避免无意义的榜单板块
+  exclude_name_patterns: ["昨日", "连板", "涨停", "跌停", "ST板块"]
+  # 板块资金条件：净流入为正，且（净额排名进入前 N 或 净占比达到阈值）
+  fund:
+    require_positive: true
+    min_net_inflow_ratio_pct: 2.0
+    rank_top_n: 20
+
+  # 板块同样要求处于下跌趋势、并且当天放量、上涨
+  trend:
+    lookback_days: 20
+    min_drop_pct: 8.0
+    ma_period: 20
+    ma_discount_pct: 5.0
+    prior_down_days: 3
+
+  volume:
+    avg_days: 5
+    min_volume_ratio: 2.0
+    min_turnover_ratio: 1.8
+    use_turnover_ratio: true
+
+# 异动强度评分。四因子先归一化到 0~100，再按权重加权。
+# 例：放量因子 = min(量比 / full_marks.volume_ratio, 1) * 100
+scoring:
+  stock:
+    weights:
+      volume: 30
+      gain: 20
+      fund: 30
+      drop: 20
+    full_marks:
+      volume_ratio: 5.0
+      gain_pct: 10.0
+      fund_ratio_pct: 20.0
+      drop_pct: 20.0
+  sector:
+    weights:
+      volume: 30
+      gain: 20
+      fund: 30
+      drop: 20
+    full_marks:
+      volume_ratio: 5.0
+      gain_pct: 8.0
+      fund_ratio_pct: 20.0
+      drop_pct: 20.0
